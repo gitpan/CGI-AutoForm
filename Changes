@@ -1,0 +1,9 @@
+Revision history for Perl extension CGI::AutoForm.
+
+1.02  Thu Jul  3 19:08:30 PDT 2008
+        - support relative date searches, cleanup, documentation
+
+0.01  Thu Jul  3 19:00:34 2008
+	- original version; created by h2xs 1.23 with options
+		-A -X -b 5.5.3 -n CGI::AutoForm
+
