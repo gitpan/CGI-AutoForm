@@ -12,7 +12,7 @@ use DBIx::IO::Table;
 use DBIx::IO::GenLib ();
 
 
-*CGI::AutoForm::VERSION = \'1.02';
+*CGI::AutoForm::VERSION = \'1.03';
 
 *CGI::AutoForm::DISPLAY_ONLY_GROUP = \'DISPLAY ONLY';
 *CGI::AutoForm::INSERT_GROUP = \'INSERTABLE';
@@ -470,7 +470,7 @@ ID value on inspection (not recommended for large tables as the select list beco
 =head2 Select lists & ID masking
 
 There is a significant amount of magic to mask ID values
-with related lookup tables (meta-data) and verify referential intergrity thereof. Take the example of a schema model of a CD
+with related lookup tables (meta-data) and verify referential integrity thereof. Take the example of a schema model of a CD
 collection:
 
   ARTIST
@@ -2680,9 +2680,9 @@ sub _process_field_head
             $self->{ast_foot}++;
         }
     }
-    if (length($field_s->{ALERT_SUMMARY}))
+    if (length($field_s->{HELP_SUMMARY}))
     {
-        my $sum = $field_s->{ALERT_SUMMARY};
+        my $sum = $field_s->{HELP_SUMMARY};
         $sum =~ s/\"/\\"/gs;
         $sum =~ s/\r?\n/\\n/gs;
         my $func_name = $field_s->{FORM_ELEMENT_NAME};
@@ -3326,9 +3326,11 @@ sub _validate
     }
     elsif (length($val) && !ref($val))
     {
+        my $ct = '';
+        eval{ $ct = $group->{table}->column_type($field->{FIELD_NAME}); };
         my $rv;
         if (($rv = ($field->{DATATYPE} ? _verify_datatype($val,$field->{DATATYPE},$field->{_imp_datetype}) : 1)) > 0 &&
-            ( (ref($group->{table}) && length($group->{table}->column_type($field->{FIELD_NAME}))) ?
+            ( (ref($group->{table}) && length($ct)) ?
             ($rv = $group->{table}->verify_datatype($val,$field->{FIELD_NAME})) > 0 : 1))
         {
             if ($field->{INPUT_MAXLENGTH} && $field->{INPUT_MAXLENGTH} < length($val))
