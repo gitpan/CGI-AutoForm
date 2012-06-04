@@ -12,7 +12,7 @@ use DBIx::IO::Table;
 use DBIx::IO::GenLib ();
 
 
-*CGI::AutoForm::VERSION = \'1.03';
+*CGI::AutoForm::VERSION = \'1.04';
 
 *CGI::AutoForm::DISPLAY_ONLY_GROUP = \'DISPLAY ONLY';
 *CGI::AutoForm::INSERT_GROUP = \'INSERTABLE';
@@ -341,7 +341,7 @@ For the CHECKGROUP input control, will insert multiple values as one field with 
 
 =item SEARCH_CONTROL_TYPE
 
-Form control type for search groups, one of: SELECT, CHECKBOX, RADIO, TEXT, MATCH TEXT, DATE, DATETIME, DATERANGE, DATETRANGE (query on a range of date + time), RANGE
+Form control type for search groups, one of: SELECT, CHECKBOX, RADIO, TEXT, MATCH TEXT, COMMALIST, DATE, DATETIME, DATERANGE, DATETRANGE (query on a range of date + time), RANGE
 
 =item SEARCH_MULT_SELECT
 
@@ -1289,6 +1289,10 @@ sub create_field
     {
         $elem_name_app = "._CG";
     }
+    elsif ($type eq 'COMMALIST')
+    {
+        $elem_name_app = "._CL";
+    }
     $field_attrs->{FORM_ELEMENT_NAME} = "$group_name." . $fname . $elem_name_app;
     return $field_attrs;
 }
@@ -1687,7 +1691,7 @@ sub field_html
 {
     my ($self,$field) = @_;
     my $type = $self->control_type($field);
-    if ($type eq 'TEXT' || $type eq 'PASSWORD' || $type eq 'MATCH TEXT')
+    if ($type eq 'TEXT' || $type eq 'PASSWORD' || $type eq 'MATCH TEXT' || $type eq 'COMMALIST')
     {
         return ($field->{html} = $self->text_pass_html($field,$type));
     }
@@ -1927,6 +1931,8 @@ sub text_pass_html
 {
     my ($self,$field,$type) = @_;
 
+    my $html_type = $type;
+
     my $need_req = $field->{REQUIRED} eq 'Y';
     my $need_req_class = 0;
     if ($need_req)
@@ -1935,19 +1941,29 @@ sub text_pass_html
     }
 
     my $val = $field->{VALUE};
+
+    $self->{_ast_match}++,$html_type = 'TEXT' if $type eq 'MATCH TEXT';
+
+    if ($type eq 'COMMALIST')
+    {
+        $self->{_cst_match}++;
+        $html_type = 'TEXT';
+        undef($field->{INPUT_MAXLENGTH});
+        $field->{INPUT_SIZE} *= 2;
+        $val = join(',',@$val) if ref($val);
+    }
+
     $val = '**INVALID REFERENCE**' if ref($val);
 
-    $self->{_ast_match}++ if $type eq 'MATCH TEXT';
-
-##at $type = 'TEXT' if $type eq 'MATCH TEXT' ???
-    return qq[<INPUT TYPE="$type" ] .
+    return qq[<INPUT TYPE="$html_type" ] .
         qq[NAME="] . $self->escape($field->{FORM_ELEMENT_NAME}) . '" ' .
         qq[VALUE="] . $self->escape($val) . '" ' .
         ($field->{INPUT_SIZE} ? qq[SIZE="$field->{INPUT_SIZE}" ] : '') .
         ($field->{INPUT_MAXLENGTH} ? qq[MAXLENGTH="$field->{INPUT_MAXLENGTH}" ] : '') .
         ($need_req_class ? qq[CLASS="REQI" ] : "") .
         "$field->{ELEMENT_ATTRS}>" .
-        ($type eq 'MATCH TEXT' ? '**' : '');
+        ($type eq 'MATCH TEXT' ? '**' : '') .
+        ($type eq 'COMMALIST' ? '***' : '');
 }
 
 sub textarea_html
@@ -2267,6 +2283,10 @@ sub _export_search
     {
         $field->{VALUE} = $self->_extract_query_val("$fname._WM",1) if ($qhit);
     }
+    elsif ($type eq 'COMMALIST')
+    {
+        $field->{VALUE} = [split(/,/,$self->_extract_query_val("$fname._CL",1))] if ($qhit);
+    }
     else
     {
         $field->{VALUE} = $self->_extract_query_val($fname,1) if ($qhit);
@@ -2550,7 +2570,9 @@ sub prepare_export
         qq[<TD style="text-align: left;"><INPUT $self->{submit_button_attrs} TYPE="SUBMIT" $submit_val></TD></TR></TABLE></P></FORM>] unless defined($self->{tail_html});
     $self->{tail_html} .= qq[<DIV>* Indicates required field</DIV>] if $self->{ast_foot};
     my $wmess = $self->escape("** Field accepts '\%' as a wildcard matching operator");
+    my $cmess = $self->escape("*** Field accepts a comma-separated list of values");
     $self->{tail_html} .= qq[<DIV>$wmess</DIV>] if $self->{_ast_match};
+    $self->{tail_html} .= qq[<DIV>$cmess</DIV>] if $self->{_cst_match};
     $self->{body_html} = $self->hidden_html() . $self->{body_html};
     my $tmess = $self->{top_message};
     my $noscript = '';
@@ -3267,7 +3289,7 @@ sub validate_query
                     ($valid = $self->_validate($field,$re,$valid,$callback,$group));
                 }
             }
-            elsif ($type eq 'MATCH TEXT')
+            elsif ($type eq 'MATCH TEXT' || $type eq 'COMMALIST')
             {
                 next;
             }
