@@ -12,7 +12,7 @@ use DBIx::IO::Table;
 use DBIx::IO::GenLib ();
 
 
-*CGI::AutoForm::VERSION = \'1.04';
+*CGI::AutoForm::VERSION = \'1.05';
 
 *CGI::AutoForm::DISPLAY_ONLY_GROUP = \'DISPLAY ONLY';
 *CGI::AutoForm::INSERT_GROUP = \'INSERTABLE';
@@ -3078,6 +3078,7 @@ sub _copy_field
         INPUT_SIZE
         INPUT_MAXLENGTH
         ELEMENT_ATTRS
+        HELP_SUMMARY
     ))
     {
         $target->{$prop} = $templ->{$prop} if exists($templ->{$prop}) && !exists($target->{$prop});
@@ -3926,6 +3927,8 @@ __END__
 =head1 BUGS
 
 This file is way too long - it should be divided into smaller classes each with limited scope (e.g. create a CGI::AutoForm::Group class).
+
+No quoting of object (table) names is done within SQL (L<DBIx::IO>) so object names containing reserved words or otherwise need quoting (e.g. `mysql_reserved_word` or "oracle_reserved_word") in your respective RDBMS will be problematic.
 
 =head1 SEE ALSO
 
